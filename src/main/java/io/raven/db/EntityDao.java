@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
@@ -353,6 +354,21 @@ public class EntityDao<T> {
       });
     }
 
+    public <U> TransactionContext<T> save(EntityDao<U> lookupDao, Function<T, U> entityGenerator, BiFunction<U, T, Void> postPersistHandler) {
+      return apply(parent -> {
+        try {
+          U entity = entityGenerator.apply(parent);
+          lookupDao.save(entity);
+          postPersistHandler.apply(entity, parent);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return null;
+      });
+    }
+
+
+
     public <U> TransactionContext<T> saveAll(EntityDao<U> lookupDao, Function<T, List<U>> entityGenerator) {
       return apply(parent -> {
         try {
@@ -498,6 +514,36 @@ public class EntityDao<T> {
         return null;
       });
     }
+
+    public <U> BatchTransactionContext<T> saveAll(EntityDao<U> lookupDao, Function<List<T>, List<U>> entityGenerator, BiFunction<List<U>, List<T>, Void> postPersistHandler) {
+      return apply(parent -> {
+        try {
+          List<U> entities = entityGenerator.apply(parent);
+          lookupDao.save(entities);
+          postPersistHandler.apply(entities, parent);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return null;
+      });
+    }
+
+
+    public <U> BatchTransactionContext<T> save(EntityDao<U> lookupDao, Function<List<T>, Optional<U>> entityGenerator, BiFunction<Optional<U>, List<T>, Void> postPersistHandler) {
+      return apply(parent -> {
+        try {
+          Optional<U> entity = entityGenerator.apply(parent);
+          if (entity.isPresent()) {
+            lookupDao.save(entity.get());
+          }
+          postPersistHandler.apply(entity, parent);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return null;
+      });
+    }
+
 
     public List<T> execute() {
       TransactionManager transactionManager = TransactionManager.newTransaction()
