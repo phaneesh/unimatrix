@@ -31,6 +31,8 @@ import java.util.function.UnaryOperator;
 public class EntityDao<T> {
 
   private final Class<T> entityClass;
+
+  @Getter
   private final EntityInternalDao dao;
 
   public EntityDao(SessionFactory sessionFactory, Class<T> entityClass) {
@@ -124,7 +126,6 @@ public class EntityDao<T> {
     return updateImpl(id, dao::get, updater);
   }
 
-
   public TransactionContext<T> getTransactionContext(Long id) {
     return new TransactionContext<T>(dao.sessionFactory, dao::getLockedForWrite, id);
   }
@@ -134,7 +135,7 @@ public class EntityDao<T> {
   }
 
   public BatchTransactionContext<T> getBatchTransactionContext(List<Long> ids) {
-    return new BatchTransactionContext<>(dao.sessionFactory, dao::getLockedForWrite, ids, true);
+    return new BatchTransactionContext<>(this, dao::getLockedForWrite, ids, true);
   }
 
   public BatchTransactionContext<T> getBatchTransactionContext(Supplier<List<Long>> supplier) {
@@ -150,7 +151,7 @@ public class EntityDao<T> {
   }
 
   public BatchTransactionContext<T> saveBatchTransactionContext(List<T> entities) {
-    return new BatchTransactionContext<>(dao.sessionFactory, dao::save, entities);
+    return new BatchTransactionContext<>(this, dao::save, entities);
   }
 
   public BatchTransactionContext<T> saveBatchTransactionContext(Supplier<List<T>> generator) {
@@ -469,7 +470,7 @@ public class EntityDao<T> {
   @Getter
   public static class BatchTransactionContext<T> {
 
-    private final SessionFactory sessionFactory;
+    private final EntityDao<T> dao;
     private final Mode mode;
     private Function<List<Long>, List<T>> function;
     private UnaryOperator<List<T>> saver;
@@ -477,15 +478,15 @@ public class EntityDao<T> {
     private List<Long> keys;
     private List<Function<List<T>, Void>> operations = Lists.newArrayList();
 
-    public BatchTransactionContext(SessionFactory sessionFactory, Function<List<Long>, List<T>> getter, List<Long> keys, boolean read) {
-      this.sessionFactory = sessionFactory;
+    public BatchTransactionContext(EntityDao<T> dao, Function<List<Long>, List<T>> getter, List<Long> keys, boolean read) {
+      this.dao = dao;
       this.function = getter;
       this.keys = keys;
-      this.mode = Mode.READ;
+      this.mode = read ? Mode.READ : Mode.INSERT;
     }
 
-    public BatchTransactionContext(SessionFactory sessionFactory, UnaryOperator<List<T>> saver, List<T> entity) {
-      this.sessionFactory = sessionFactory;
+    public BatchTransactionContext(EntityDao<T> dao, UnaryOperator<List<T>> saver, List<T> entity) {
+      this.dao = dao;
       this.saver = saver;
       this.entity = entity;
       this.mode = Mode.INSERT;
@@ -544,10 +545,29 @@ public class EntityDao<T> {
       });
     }
 
+    public <U> BatchTransactionContext<T> save(EntityDao<U> lookupDao, Function<List<T>, Optional<U>> entityGenerator, QueryParams postPersistQuery) {
+      return apply(parent -> {
+        try {
+          Optional<U> entity = entityGenerator.apply(parent);
+          if (entity.isPresent()) {
+            lookupDao.save(entity.get());
+          }
+          if(postPersistQuery.isNativeQuery()) {
+            dao.updateNative(postPersistQuery.getQuery(), postPersistQuery.getParams());
+          } else {
+            dao.update(postPersistQuery.getQuery(), postPersistQuery.getParams());
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return null;
+      });
+    }
+
 
     public List<T> execute() {
       TransactionManager transactionManager = TransactionManager.newTransaction()
-          .sessionFactory(sessionFactory).readOnly(false).build();
+          .sessionFactory(dao.getDao().sessionFactory).readOnly(false).build();
       transactionManager.beforeStart();
       try {
         List<T> result = generateEntity();
