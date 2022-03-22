@@ -273,7 +273,7 @@ public class EntityDao<T> {
 
   @Data
   @Builder
-  private static class CriteriaParams {
+  public static class CriteriaParams {
 
     private DetachedCriteria criteria;
 
@@ -288,7 +288,7 @@ public class EntityDao<T> {
 
   @Data
   @Builder
-  private static class QueryParams {
+  public static class QueryParams {
 
     private String query;
 
@@ -299,7 +299,7 @@ public class EntityDao<T> {
 
   @Data
   @Builder
-  private static class MaxParams {
+  public static class MaxParams {
 
     private DetachedCriteria criteria;
 
