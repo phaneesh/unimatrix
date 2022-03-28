@@ -1,11 +1,13 @@
 package io.raven.db;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.Criteria;
 import org.hibernate.LockMode;
 import org.hibernate.LockOptions;
@@ -15,6 +17,8 @@ import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.query.Query;
 
+import javax.persistence.Id;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +39,17 @@ public class EntityDao<T> {
   @Getter
   private final EntityInternalDao dao;
 
+  @Getter
+  private final Field keyField;
+
   public EntityDao(SessionFactory sessionFactory, Class<T> entityClass) {
     this.dao = new EntityInternalDao(sessionFactory, entityClass);
     this.entityClass = entityClass;
+
+    Field[] fields = FieldUtils.getFieldsWithAnnotation(entityClass, Id.class);
+    Preconditions.checkArgument(fields.length != 0, "At least one field needs to be sharding keys");
+    Preconditions.checkArgument(fields.length == 1, "Only one field can be sharding keys");
+    this.keyField = fields[0];
   }
 
   public Optional<T> get(Long ids) throws UniMatrixException {
@@ -295,6 +307,10 @@ public class EntityDao<T> {
     private Map<String, Object> params;
 
     private boolean nativeQuery;
+
+    private boolean propagateParent;
+
+    private String targetProperty;
   }
 
   @Data
@@ -549,12 +565,30 @@ public class EntityDao<T> {
       return apply(parent -> {
         try {
           Optional<U> entity = entityGenerator.apply(parent);
+          Optional<U> savedParent = Optional.empty();
           if (entity.isPresent()) {
-            lookupDao.save(entity.get());
+            savedParent = lookupDao.save(entity.get());
           }
           if(postPersistQuery.isNativeQuery()) {
+            if(postPersistQuery.isPropagateParent() && savedParent.isPresent()
+                && !Strings.isNullOrEmpty(postPersistQuery.getTargetProperty())) {
+              if (!lookupDao.getKeyField().canAccess(savedParent.get())) {
+                try {
+                  lookupDao.getKeyField().setAccessible(true);
+                } catch (SecurityException e) {
+                  log.error("Error making keys field accessible please use a public method and mark that as Id", e);
+                  throw new IllegalArgumentException("Invalid class, DAO cannot be created.", e);
+                }
+              }
+              postPersistQuery.getParams().put(postPersistQuery.getTargetProperty(),
+                  lookupDao.getKeyField().get(savedParent.get()));
+            }
             dao.updateNative(postPersistQuery.getQuery(), postPersistQuery.getParams());
           } else {
+            if(postPersistQuery.isPropagateParent() && savedParent.isPresent()
+                && !Strings.isNullOrEmpty(postPersistQuery.getTargetProperty())) {
+              postPersistQuery.getParams().put(postPersistQuery.getTargetProperty(), savedParent.get());
+            }
             dao.update(postPersistQuery.getQuery(), postPersistQuery.getParams());
           }
         } catch (Exception e) {
