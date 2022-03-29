@@ -561,45 +561,6 @@ public class EntityDao<T> {
       });
     }
 
-    public <U> BatchTransactionContext<T> save(EntityDao<U> lookupDao, Function<List<T>, Optional<U>> entityGenerator, QueryParams postPersistQuery) {
-      return apply(parent -> {
-        try {
-          Optional<U> entity = entityGenerator.apply(parent);
-          Optional<U> savedParent = Optional.empty();
-          if (entity.isPresent()) {
-            savedParent = Optional.ofNullable(lookupDao.dao.save(entity.get()));
-          }
-          if(postPersistQuery.isNativeQuery()) {
-            if(postPersistQuery.isPropagateParent() && savedParent.isPresent()
-                && !Strings.isNullOrEmpty(postPersistQuery.getTargetProperty())) {
-              if (!lookupDao.getKeyField().canAccess(savedParent.get())) {
-                try {
-                  lookupDao.getKeyField().setAccessible(true);
-                } catch (SecurityException e) {
-                  log.error("Error making keys field accessible please use a public method and mark that as Id", e);
-                  throw new IllegalArgumentException("Invalid class, DAO cannot be created.", e);
-                }
-              }
-              postPersistQuery.getParams().put(postPersistQuery.getTargetProperty(),
-                  lookupDao.getKeyField().get(savedParent.get()));
-            }
-            lookupDao.getDao().update(postPersistQuery);
-          } else {
-            if(postPersistQuery.isPropagateParent() && savedParent.isPresent()
-                && !Strings.isNullOrEmpty(postPersistQuery.getTargetProperty())) {
-              postPersistQuery.getParams().put(postPersistQuery.getTargetProperty(), savedParent.get());
-            }
-
-            lookupDao.getDao().update(postPersistQuery);
-          }
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-        return null;
-      });
-    }
-
-
     public List<T> execute() {
       TransactionManager transactionManager = TransactionManager.newTransaction()
           .sessionFactory(sessionFactory).readOnly(false).build();

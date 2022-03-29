@@ -517,37 +517,4 @@ public class EntityDaoTest extends AbstractDaoTest {
     assertTrue(fetched.isPresent());
     assertEquals("Updated", fetched.get().getText());
   }
-
-
-
-  @Test()
-  void testBatchTransactionContextWithPostPersistHandler() throws Exception {
-    TestEntity testEntity = TestEntity.builder()
-        .externalId("BatchTransactionContextWithPostPersistHandler")
-        .text("Some Text1")
-        .amount(BigDecimal.ONE)
-        .build();
-    Optional<TestEntity> saved = testEntityEntityDao.save(testEntity);
-    assertTrue(saved.isPresent());
-    Map<String, Object> queryParams = new HashMap<>();
-    queryParams.put("lIds", Lists.newArrayList(saved.get().getId()));
-    QueryParams postPersistQuery = QueryParams.builder()
-        .query("update TestEntity set parent=:lParent where id in (:lIds)")
-        .propagateParent(true)
-        .nativeQuery(false)
-        .targetProperty("lParent")
-        .params(queryParams)
-        .build();
-    TestRelatedEntity relatedEntity = TestRelatedEntity.builder()
-        .externalId("related_entity")
-        .text("related entity text")
-        .build();
-    testEntityEntityDao.getBatchTransactionContext(Lists.newArrayList(saved.get().getId()))
-        .save(testRelatedEntityEntityDao, testEntities -> Optional.of(relatedEntity), postPersistQuery)
-        .execute();
-    Optional<TestEntity> fetched = testEntityEntityDao.selectSingle(DetachedCriteria.forClass(TestEntity.class)
-        .add(Restrictions.eq("externalId", "BatchTransactionContextWithPostPersistHandler")), e -> e );
-    assertTrue(fetched.isPresent());
-    assertNotNull(fetched.get().getParent());
-  }
 }
