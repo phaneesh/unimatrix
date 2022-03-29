@@ -1,6 +1,8 @@
 package io.raven.db;
 
+import com.google.common.collect.Lists;
 import io.raven.db.entity.TestEntity;
+import io.raven.db.entity.TestRelatedEntity;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -22,7 +24,7 @@ public class AbstractDaoTest {
         .build();
     uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
   }
 

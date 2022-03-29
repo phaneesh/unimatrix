@@ -7,18 +7,25 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import javax.persistence.*;
-import java.math.BigDecimal;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
 import java.util.Calendar;
 
 @Entity
-@Table(name = "test_entity")
+@Table(name = "test_related_entity")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class TestEntity {
+public class TestRelatedEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,19 +39,12 @@ public class TestEntity {
   @NotNull
   private String text;
 
-  @Column(name = "amount")
-  private BigDecimal amount;
-
-  @ManyToOne
-  @JoinColumn(name = "parent")
-  private TestRelatedEntity parent;
-
   @Column(name = "partition_id", nullable = false)
   private int partitionId;
-
 
   @PrePersist
   public void assignPartition() {
     this.partitionId = Calendar.getInstance().get(Calendar.YEAR);
   }
+
 }

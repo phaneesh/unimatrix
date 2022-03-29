@@ -8,7 +8,11 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.hibernate.*;
+import org.hibernate.Criteria;
+import org.hibernate.LockMode;
+import org.hibernate.LockOptions;
+import org.hibernate.MultiIdentifierLoadAccess;
+import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.query.Query;
@@ -20,7 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.LongSupplier;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 @Slf4j
 public class EntityDao<T> {
@@ -138,7 +147,7 @@ public class EntityDao<T> {
   }
 
   public BatchTransactionContext<T> getBatchTransactionContext(List<Long> ids) {
-    return new BatchTransactionContext<>(this, dao::getLockedForWrite, ids, true);
+    return new BatchTransactionContext<>(dao.sessionFactory, dao::getLockedForWrite, ids, true);
   }
 
   public BatchTransactionContext<T> getBatchTransactionContext(Supplier<List<Long>> supplier) {
@@ -154,7 +163,7 @@ public class EntityDao<T> {
   }
 
   public BatchTransactionContext<T> saveBatchTransactionContext(List<T> entities) {
-    return new BatchTransactionContext<>(this, dao::save, entities);
+    return new BatchTransactionContext<>(dao.sessionFactory, dao::save, entities);
   }
 
   public BatchTransactionContext<T> saveBatchTransactionContext(Supplier<List<T>> generator) {
@@ -477,7 +486,7 @@ public class EntityDao<T> {
   @Getter
   public static class BatchTransactionContext<T> {
 
-    private final EntityDao<T> dao;
+    private final SessionFactory sessionFactory;
     private final Mode mode;
     private Function<List<Long>, List<T>> function;
     private UnaryOperator<List<T>> saver;
@@ -485,15 +494,15 @@ public class EntityDao<T> {
     private List<Long> keys;
     private List<Function<List<T>, Void>> operations = Lists.newArrayList();
 
-    public BatchTransactionContext(EntityDao<T> dao, Function<List<Long>, List<T>> getter, List<Long> keys, boolean read) {
-      this.dao = dao;
+    public BatchTransactionContext(SessionFactory sessionFactory, Function<List<Long>, List<T>> getter, List<Long> keys, boolean read) {
+      this.sessionFactory = sessionFactory;
       this.function = getter;
       this.keys = keys;
       this.mode = read ? Mode.READ : Mode.INSERT;
     }
 
-    public BatchTransactionContext(EntityDao<T> dao, UnaryOperator<List<T>> saver, List<T> entity) {
-      this.dao = dao;
+    public BatchTransactionContext(SessionFactory sessionFactory, UnaryOperator<List<T>> saver, List<T> entity) {
+      this.sessionFactory = sessionFactory;
       this.saver = saver;
       this.entity = entity;
       this.mode = Mode.INSERT;
@@ -558,7 +567,7 @@ public class EntityDao<T> {
           Optional<U> entity = entityGenerator.apply(parent);
           Optional<U> savedParent = Optional.empty();
           if (entity.isPresent()) {
-            savedParent = lookupDao.save(entity.get());
+            savedParent = Optional.ofNullable(lookupDao.dao.save(entity.get()));
           }
           if(postPersistQuery.isNativeQuery()) {
             if(postPersistQuery.isPropagateParent() && savedParent.isPresent()
@@ -574,13 +583,14 @@ public class EntityDao<T> {
               postPersistQuery.getParams().put(postPersistQuery.getTargetProperty(),
                   lookupDao.getKeyField().get(savedParent.get()));
             }
-            dao.getDao().update(postPersistQuery);
+            lookupDao.getDao().update(postPersistQuery);
           } else {
             if(postPersistQuery.isPropagateParent() && savedParent.isPresent()
                 && !Strings.isNullOrEmpty(postPersistQuery.getTargetProperty())) {
               postPersistQuery.getParams().put(postPersistQuery.getTargetProperty(), savedParent.get());
             }
-            dao.getDao().update(postPersistQuery);
+
+            lookupDao.getDao().update(postPersistQuery);
           }
         } catch (Exception e) {
           throw new RuntimeException(e);
@@ -592,12 +602,11 @@ public class EntityDao<T> {
 
     public List<T> execute() {
       TransactionManager transactionManager = TransactionManager.newTransaction()
-          .sessionFactory(dao.getDao().sessionFactory).readOnly(false).build();
+          .sessionFactory(sessionFactory).readOnly(false).build();
       transactionManager.beforeStart();
       try {
         List<T> result = generateEntity();
-        operations
-            .forEach(operation -> operation.apply(result));
+        operations.forEach(operation -> operation.apply(result));
         return result;
       } catch (Exception e) {
         transactionManager.onError(e);

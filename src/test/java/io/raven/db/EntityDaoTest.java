@@ -2,7 +2,9 @@ package io.raven.db;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.raven.db.EntityDao.QueryParams;
 import io.raven.db.entity.TestEntity;
+import io.raven.db.entity.TestRelatedEntity;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +13,9 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,9 +28,12 @@ public class EntityDaoTest extends AbstractDaoTest {
 
   private EntityDao<TestEntity> testEntityEntityDao;
 
+  private EntityDao<TestRelatedEntity> testRelatedEntityEntityDao;
+
   @BeforeEach
   public void before() {
     testEntityEntityDao = new EntityDao<>(uniMatrix.getSessionFactory(), TestEntity.class);
+    testRelatedEntityEntityDao = new EntityDao<>(uniMatrix.getSessionFactory(), TestRelatedEntity.class);
   }
 
   @Test
@@ -509,5 +516,38 @@ public class EntityDaoTest extends AbstractDaoTest {
         .add(Restrictions.eq("externalId", "SaveTransactionContextMutate")), e -> e );
     assertTrue(fetched.isPresent());
     assertEquals("Updated", fetched.get().getText());
+  }
+
+
+
+  @Test()
+  void testBatchTransactionContextWithPostPersistHandler() throws Exception {
+    TestEntity testEntity = TestEntity.builder()
+        .externalId("BatchTransactionContextWithPostPersistHandler")
+        .text("Some Text1")
+        .amount(BigDecimal.ONE)
+        .build();
+    Optional<TestEntity> saved = testEntityEntityDao.save(testEntity);
+    assertTrue(saved.isPresent());
+    Map<String, Object> queryParams = new HashMap<>();
+    queryParams.put("lIds", Lists.newArrayList(saved.get().getId()));
+    QueryParams postPersistQuery = QueryParams.builder()
+        .query("update TestEntity set parent=:lParent where id in (:lIds)")
+        .propagateParent(true)
+        .nativeQuery(false)
+        .targetProperty("lParent")
+        .params(queryParams)
+        .build();
+    TestRelatedEntity relatedEntity = TestRelatedEntity.builder()
+        .externalId("related_entity")
+        .text("related entity text")
+        .build();
+    testEntityEntityDao.getBatchTransactionContext(Lists.newArrayList(saved.get().getId()))
+        .save(testRelatedEntityEntityDao, testEntities -> Optional.of(relatedEntity), postPersistQuery)
+        .execute();
+    Optional<TestEntity> fetched = testEntityEntityDao.selectSingle(DetachedCriteria.forClass(TestEntity.class)
+        .add(Restrictions.eq("externalId", "BatchTransactionContextWithPostPersistHandler")), e -> e );
+    assertTrue(fetched.isPresent());
+    assertNotNull(fetched.get().getParent());
   }
 }
