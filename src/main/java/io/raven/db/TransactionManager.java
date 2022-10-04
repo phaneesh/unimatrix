@@ -117,7 +117,7 @@ public class TransactionManager {
       if (completeTransaction) {
         onError(e);
       }
-      throw UniMatrixException.from().exception(e).build();
+      throw new UniMatrixException(e);
     }
   }
 }

@@ -1,6 +1,8 @@
 package io.raven.db;
 
+import com.google.common.collect.Lists;
 import io.raven.db.entity.TestEntity;
+import io.raven.db.entity.TestRelatedEntity;
 import org.hibernate.resource.transaction.spi.TransactionStatus;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class TransactionManagerTest {
+class TransactionManagerTest {
 
   @Test
   void beforeStartTest() {
@@ -24,7 +26,7 @@ public class TransactionManagerTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     var tm = TransactionManager.newTransaction()
         .readOnly(true)
@@ -46,7 +48,7 @@ public class TransactionManagerTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     var tm = TransactionManager.newTransaction()
         .readOnly(true)
@@ -67,7 +69,7 @@ public class TransactionManagerTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     var tm = TransactionManager.newTransaction()
         .readOnly(true)
@@ -88,7 +90,7 @@ public class TransactionManagerTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     var tm = TransactionManager.newTransaction()
         .readOnly(true)

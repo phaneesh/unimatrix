@@ -128,9 +128,7 @@ public class EntityDao<T> {
             return true;
           });
     } catch (Exception e) {
-      throw UniMatrixException.from()
-          .exception(e)
-          .build();
+      throw new UniMatrixException(e);
     }
   }
 
@@ -331,7 +329,7 @@ public class EntityDao<T> {
     private UnaryOperator<T> saver;
     private T entity;
     private Long key;
-    private List<Function<T, Void>> operations = Lists.newArrayList();
+    private final List<Function<T, Void>> operations = Lists.newArrayList();
 
     public TransactionContext(SessionFactory sessionFactory, Function<Long, Optional<T>> getter, Long key) {
       this.sessionFactory = sessionFactory;
@@ -362,10 +360,10 @@ public class EntityDao<T> {
     public <U> TransactionContext<T> save(EntityDao<U> lookupDao, Function<T, U> entityGenerator) {
       return apply(parent -> {
         try {
-          U entity = entityGenerator.apply(parent);
-          lookupDao.save(entity);
+          U generatedEntity = entityGenerator.apply(parent);
+          lookupDao.save(generatedEntity);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -374,11 +372,11 @@ public class EntityDao<T> {
     public <U> TransactionContext<T> save(EntityDao<U> lookupDao, Function<T, U> entityGenerator, BiFunction<U, T, Void> postPersistHandler) {
       return apply(parent -> {
         try {
-          U entity = entityGenerator.apply(parent);
-          lookupDao.save(entity);
-          postPersistHandler.apply(entity, parent);
+          U generatedEntity = entityGenerator.apply(parent);
+          lookupDao.save(generatedEntity);
+          postPersistHandler.apply(generatedEntity, parent);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -392,7 +390,7 @@ public class EntityDao<T> {
           List<U> entities = entityGenerator.apply(parent);
           lookupDao.save(entities);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -403,7 +401,7 @@ public class EntityDao<T> {
         try {
           lookupDao.update(id, handler);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -414,9 +412,9 @@ public class EntityDao<T> {
         try {
           int result = lookupDao.update(query, params);
           if (result < 1)
-            throw UniMatrixException.fromMessage().message("Update operation returned result " + result).build();
+            throw new UniMatrixException("Update operation returned result " + result);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -461,7 +459,7 @@ public class EntityDao<T> {
         case READ:
           result = function.apply(key);
           if (result.isEmpty()) {
-            throw new RuntimeException("Entity doesn't exist for keys: " + key);
+            throw new UniMatrixException("Entity doesn't exist for keys: " + key);
           }
           break;
         case INSERT:
@@ -492,7 +490,7 @@ public class EntityDao<T> {
     private UnaryOperator<List<T>> saver;
     private List<T> entity;
     private List<Long> keys;
-    private List<Function<List<T>, Void>> operations = Lists.newArrayList();
+    private final List<Function<List<T>, Void>> operations = Lists.newArrayList();
 
     public BatchTransactionContext(SessionFactory sessionFactory, Function<List<Long>, List<T>> getter, List<Long> keys, boolean read) {
       this.sessionFactory = sessionFactory;
@@ -526,7 +524,7 @@ public class EntityDao<T> {
           List<U> entities = entityGenerator.apply(parent);
           entityDao.save(entities);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -539,7 +537,7 @@ public class EntityDao<T> {
           lookupDao.save(entities);
           postPersistHandler.apply(entities, parent);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -549,13 +547,11 @@ public class EntityDao<T> {
     public <U> BatchTransactionContext<T> save(EntityDao<U> lookupDao, Function<List<T>, Optional<U>> entityGenerator, BiFunction<Optional<U>, List<T>, Void> postPersistHandler) {
       return apply(parent -> {
         try {
-          Optional<U> entity = entityGenerator.apply(parent);
-          if (entity.isPresent()) {
-            lookupDao.save(entity.get());
-          }
-          postPersistHandler.apply(entity, parent);
+          Optional<U> generatedEntity = entityGenerator.apply(parent);
+          generatedEntity.ifPresent(lookupDao::save);
+          postPersistHandler.apply(generatedEntity, parent);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UniMatrixException(e);
         }
         return null;
       });
@@ -583,7 +579,7 @@ public class EntityDao<T> {
         case READ:
           result = function.apply(keys);
           if (result == null) {
-            throw new RuntimeException("Entity doesn't exist for keys: " + keys);
+            throw new UniMatrixException("Entity doesn't exist for keys: " + keys);
           }
           break;
         case INSERT:

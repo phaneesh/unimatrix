@@ -1,6 +1,8 @@
 package io.raven.db;
 
+import com.google.common.collect.Lists;
 import io.raven.db.entity.TestEntity;
+import io.raven.db.entity.TestRelatedEntity;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +11,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class UniMatrixTest {
+class UniMatrixTest {
 
   @Test
   void initTest() {
@@ -21,10 +23,12 @@ public class UniMatrixTest {
         .database("db_test")
         .url("jdbc:h2:mem:db_init_test")
         .build();
-    var uniMatrix = UniMatrix.builder()
-        .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
-        .build();
+    var uniMatrix =
+        UniMatrix.builder()
+            .uniMatrixConfig(uniMatrixConfig)
+            .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
+            .build();
+    assertNotNull(uniMatrix);
   }
 
   @Test
@@ -39,7 +43,7 @@ public class UniMatrixTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     SessionFactory sessionFactory = uniMatrix.getOrCreateSessionFactory();
     assertNotNull(sessionFactory);
@@ -58,7 +62,7 @@ public class UniMatrixTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     SessionFactory sessionFactory = uniMatrix.getSessionFactory();
     assertTrue(sessionFactory.isOpen());
