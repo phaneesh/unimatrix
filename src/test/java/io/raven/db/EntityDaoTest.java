@@ -1,15 +1,14 @@
 package io.raven.db;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.raven.db.EntityDao.QueryParams;
 import io.raven.db.entity.TestEntity;
-import io.raven.db.entity.TestRelatedEntity;
-import org.hibernate.criterion.DetachedCriteria;
-import org.hibernate.criterion.Restrictions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,23 +16,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Restrictions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class EntityDaoTest extends AbstractDaoTest {
 
   private EntityDao<TestEntity> testEntityEntityDao;
 
-  private EntityDao<TestRelatedEntity> testRelatedEntityEntityDao;
-
   @BeforeEach
   public void before() {
     testEntityEntityDao = new EntityDao<>(uniMatrix.getSessionFactory(), TestEntity.class);
-    testRelatedEntityEntityDao = new EntityDao<>(uniMatrix.getSessionFactory(), TestRelatedEntity.class);
   }
 
   @Test
@@ -517,4 +511,19 @@ public class EntityDaoTest extends AbstractDaoTest {
     assertTrue(fetched.isPresent());
     assertEquals("Updated", fetched.get().getText());
   }
+
+  @Test
+  void testBatchPersist() throws Exception {
+    List<TestEntity> tobeSaved = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      TestEntity testChildEntity = TestEntity.builder()
+          .externalId("BatchPersist")
+          .text("Some Text " + i)
+          .build();
+      tobeSaved.add(testChildEntity);
+    }
+    var saved = testEntityEntityDao.save(tobeSaved);
+    assertEquals(tobeSaved.size(), saved.size());
+  }
+
 }

@@ -45,4 +45,7 @@ public class UniMatrixConfig {
   @Builder.Default
   private int maxAge = 55000;
 
+  @Builder.Default
+  private int jdbcBatchSize = 100;
+
 }

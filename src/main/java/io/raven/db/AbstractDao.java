@@ -47,4 +47,13 @@ public abstract class AbstractDao<E> {
     currentSession().saveOrUpdate(requireNonNull(entity));
     return entity;
   }
+
+  protected List<E> persist(List<E> entities) throws HibernateException {
+    for (E entity : entities) {
+      currentSession().persist(entity);
+    }
+    currentSession().flush();
+    currentSession().clear();
+    return entities;
+  }
 }

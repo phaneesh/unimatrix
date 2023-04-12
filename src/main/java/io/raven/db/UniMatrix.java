@@ -15,6 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static org.hibernate.cfg.AvailableSettings.BATCH_VERSIONED_DATA;
+import static org.hibernate.cfg.AvailableSettings.ORDER_INSERTS;
+import static org.hibernate.cfg.AvailableSettings.ORDER_UPDATES;
+import static org.hibernate.cfg.AvailableSettings.STATEMENT_BATCH_SIZE;
 import static org.hibernate.cfg.Environment.CURRENT_SESSION_CONTEXT_CLASS;
 import static org.hibernate.cfg.Environment.DIALECT;
 import static org.hibernate.cfg.Environment.DRIVER;
@@ -68,6 +72,10 @@ public class UniMatrix {
       settings.put(PASS, config.getPassword());
     }
     settings.put(DRIVER, config.getDriverClass());
+    settings.put(STATEMENT_BATCH_SIZE, config.getJdbcBatchSize());
+    settings.put(ORDER_INSERTS, "true");
+    settings.put(ORDER_UPDATES, "true");
+    settings.put(BATCH_VERSIONED_DATA, "true");
     settings.put("hibernate.hikari.connectionTimeout", "20000");
     settings.put("hibernate.hikari.minimumIdle", String.valueOf(config.getMinPoolSize()));
     settings.put("hibernate.hikari.maximumPoolSize", String.valueOf(config.getMaxPoolSize()));

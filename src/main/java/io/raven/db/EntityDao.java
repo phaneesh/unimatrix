@@ -362,10 +362,10 @@ public class EntityDao<T> {
     public <U> TransactionContext<T> save(EntityDao<U> lookupDao, Function<T, U> entityGenerator) {
       return apply(parent -> {
         try {
-          U entity = entityGenerator.apply(parent);
-          lookupDao.save(entity);
+          U generatedEntity = entityGenerator.apply(parent);
+          lookupDao.save(generatedEntity);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -374,11 +374,11 @@ public class EntityDao<T> {
     public <U> TransactionContext<T> save(EntityDao<U> lookupDao, Function<T, U> entityGenerator, BiFunction<U, T, Void> postPersistHandler) {
       return apply(parent -> {
         try {
-          U entity = entityGenerator.apply(parent);
-          lookupDao.save(entity);
-          postPersistHandler.apply(entity, parent);
+          U generatedEntity = entityGenerator.apply(parent);
+          lookupDao.save(generatedEntity);
+          postPersistHandler.apply(generatedEntity, parent);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -392,7 +392,7 @@ public class EntityDao<T> {
           List<U> entities = entityGenerator.apply(parent);
           lookupDao.save(entities);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -403,7 +403,7 @@ public class EntityDao<T> {
         try {
           lookupDao.update(id, handler);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -416,7 +416,7 @@ public class EntityDao<T> {
           if (result < 1)
             throw UniMatrixException.fromMessage().message("Update operation returned result " + result).build();
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -461,7 +461,7 @@ public class EntityDao<T> {
         case READ:
           result = function.apply(key);
           if (result.isEmpty()) {
-            throw new RuntimeException("Entity doesn't exist for keys: " + key);
+            throw new UnimatrixRuntimeException("Entity doesn't exist for keys: " + key);
           }
           break;
         case INSERT:
@@ -526,7 +526,7 @@ public class EntityDao<T> {
           List<U> entities = entityGenerator.apply(parent);
           entityDao.save(entities);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -539,7 +539,7 @@ public class EntityDao<T> {
           lookupDao.save(entities);
           postPersistHandler.apply(entities, parent);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -549,13 +549,13 @@ public class EntityDao<T> {
     public <U> BatchTransactionContext<T> save(EntityDao<U> lookupDao, Function<List<T>, Optional<U>> entityGenerator, BiFunction<Optional<U>, List<T>, Void> postPersistHandler) {
       return apply(parent -> {
         try {
-          Optional<U> entity = entityGenerator.apply(parent);
-          if (entity.isPresent()) {
-            lookupDao.save(entity.get());
+          Optional<U> generatedEntity = entityGenerator.apply(parent);
+          if (generatedEntity.isPresent()) {
+            lookupDao.save(generatedEntity.get());
           }
-          postPersistHandler.apply(entity, parent);
+          postPersistHandler.apply(generatedEntity, parent);
         } catch (Exception e) {
-          throw new RuntimeException(e);
+          throw new UnimatrixRuntimeException(e);
         }
         return null;
       });
@@ -583,7 +583,7 @@ public class EntityDao<T> {
         case READ:
           result = function.apply(keys);
           if (result == null) {
-            throw new RuntimeException("Entity doesn't exist for keys: " + keys);
+            throw new UnimatrixRuntimeException("Entity doesn't exist for keys: " + keys);
           }
           break;
         case INSERT:
@@ -643,11 +643,7 @@ public class EntityDao<T> {
     }
 
     List<T> save(List<T> entities) {
-      List<T> saved = new ArrayList<>();
-      for (T e : entities) {
-        saved.add(persist(e));
-      }
-      return saved;
+      return persist(entities);
     }
 
     void update(T entity) {

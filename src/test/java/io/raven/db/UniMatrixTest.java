@@ -1,6 +1,8 @@
 package io.raven.db;
 
+import com.google.common.collect.Lists;
 import io.raven.db.entity.TestEntity;
+import io.raven.db.entity.TestRelatedEntity;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +25,7 @@ public class UniMatrixTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
   }
 
@@ -39,7 +41,7 @@ public class UniMatrixTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     SessionFactory sessionFactory = uniMatrix.getOrCreateSessionFactory();
     assertNotNull(sessionFactory);
@@ -58,7 +60,7 @@ public class UniMatrixTest {
         .build();
     var uniMatrix = UniMatrix.builder()
         .uniMatrixConfig(uniMatrixConfig)
-        .entities(Collections.singletonList(TestEntity.class))
+        .entities(Lists.newArrayList(TestEntity.class, TestRelatedEntity.class))
         .build();
     SessionFactory sessionFactory = uniMatrix.getSessionFactory();
     assertTrue(sessionFactory.isOpen());
