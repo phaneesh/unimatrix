@@ -15,10 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.hibernate.cfg.AvailableSettings.BATCH_VERSIONED_DATA;
-import static org.hibernate.cfg.AvailableSettings.ORDER_INSERTS;
-import static org.hibernate.cfg.AvailableSettings.ORDER_UPDATES;
-import static org.hibernate.cfg.AvailableSettings.STATEMENT_BATCH_SIZE;
+import static org.hibernate.cfg.AvailableSettings.*;
 import static org.hibernate.cfg.Environment.CURRENT_SESSION_CONTEXT_CLASS;
 import static org.hibernate.cfg.Environment.DIALECT;
 import static org.hibernate.cfg.Environment.DRIVER;
@@ -62,6 +59,10 @@ public class UniMatrix {
     Map<String, Object> settings = new HashMap<>();
     settings.put(HBM2DDL_AUTO, config.isCreateSchema() ? "create-drop" : "none");
     settings.put(SHOW_SQL, config.isShowSql());
+    if(config.isShowSql()) {
+      settings.put(FORMAT_SQL, "true");
+      settings.put(USE_SQL_COMMENTS, "true");
+    }
     settings.put(CURRENT_SESSION_CONTEXT_CLASS, "managed");
     settings.put(DIALECT, config.getDialect());
     settings.put(URL, config.getUrl());
