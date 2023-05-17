@@ -59,10 +59,6 @@ public class UniMatrix {
     Map<String, Object> settings = new HashMap<>();
     settings.put(HBM2DDL_AUTO, config.isCreateSchema() ? "create-drop" : "none");
     settings.put(SHOW_SQL, config.isShowSql());
-    if(config.isShowSql()) {
-      settings.put(FORMAT_SQL, "true");
-      settings.put(USE_SQL_COMMENTS, "true");
-    }
     settings.put(CURRENT_SESSION_CONTEXT_CLASS, "managed");
     settings.put(DIALECT, config.getDialect());
     settings.put(URL, config.getUrl());
