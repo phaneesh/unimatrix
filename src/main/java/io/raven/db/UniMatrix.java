@@ -62,6 +62,8 @@ public class UniMatrix {
     settings.put(CURRENT_SESSION_CONTEXT_CLASS, "managed");
     settings.put(DIALECT, config.getDialect());
     settings.put(URL, config.getUrl());
+    settings.put(GENERATE_STATISTICS, config.isGenerateStatistics());
+    settings.put(LOG_SLOW_QUERY, String.valueOf(config.getSlowQueryThreshold()));
     if (!Strings.isNullOrEmpty(config.getUser())) {
       settings.put(USER, config.getUser());
     }
@@ -73,7 +75,7 @@ public class UniMatrix {
     settings.put(ORDER_INSERTS, "true");
     settings.put(ORDER_UPDATES, "true");
     settings.put(BATCH_VERSIONED_DATA, "true");
-    settings.put("hibernate.hikari.connectionTimeout", "20000");
+    settings.put("hibernate.hikari.connectionTimeout", "30000");
     settings.put("hibernate.hikari.minimumIdle", String.valueOf(config.getMinPoolSize()));
     settings.put("hibernate.hikari.maximumPoolSize", String.valueOf(config.getMaxPoolSize()));
     settings.put("hibernate.hikari.idleTimeout", String.valueOf(config.getIdleTimeout()));

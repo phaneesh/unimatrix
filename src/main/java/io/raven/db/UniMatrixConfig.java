@@ -34,18 +34,24 @@ public class UniMatrixConfig {
   private int maxPoolSize = 4;
 
   @Builder.Default
-  private int minPoolSize = 2;
+  private int minPoolSize = 0;
 
   @Builder.Default
-  private int idleTimeout = 60000;
+  private int idleTimeout = 35000;
 
   @Builder.Default
   private String testQuery = "SELECT 1;";
 
   @Builder.Default
-  private int maxAge = 55000;
+  private int maxAge = 45000;
 
   @Builder.Default
   private int jdbcBatchSize = 100;
+
+  @Builder.Default
+  private boolean generateStatistics = false;
+
+  @Builder.Default
+  private int slowQueryThreshold = 15;
 
 }
