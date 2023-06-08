@@ -551,6 +551,21 @@ public class EntityDao<T> {
       });
     }
 
+    public <U> BatchTransactionContext<T> save(EntityDao<U> lookupDao, EntityDao<T> parentLookupDao, Function<List<T>, Optional<U>> entityGenerator, QueryParams postPersistUpdateQuery) {
+      return apply(parent -> {
+        try {
+          Optional<U> generatedEntity = entityGenerator.apply(parent);
+          if (generatedEntity.isPresent()) {
+            lookupDao.save(generatedEntity.get());
+          }
+          parentLookupDao.update(postPersistUpdateQuery.getQuery(), postPersistUpdateQuery.getParams());
+        } catch (Exception e) {
+          throw new UnimatrixRuntimeException(e);
+        }
+        return null;
+      });
+    }
+
     public List<T> execute() {
       TransactionManager transactionManager = TransactionManager.newTransaction()
           .sessionFactory(sessionFactory).readOnly(false).build();
